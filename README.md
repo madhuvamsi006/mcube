@@ -410,6 +410,35 @@ Writes to `data/live/dt=YYYY-MM-DD/`: `ticks_*.parquet` (quote + depth + OI),
 `universe.parquet` (security_id → strike/expiry — ids are reused across
 expiries, so this must be captured at record time), `chain_*.parquet`.
 
+### Phase 1b — BigQuery over the collected data ✅ BUILT
+
+External tables read the parquet straight from GCS — no load step, no second
+copy. The collector writes a file and it is queryable a minute later.
+
+```bash
+export GCP_PROJECT_ID=your-project GCS_BUCKET=your-bucket
+./deploy/bigquery.sh
+```
+
+| View | What it gives you |
+|---|---|
+| `v_ticks` | every packet, timestamped, joined to strike/expiry |
+| `v_depth` | spread, microprice, L1 and L5 imbalance, book pressure |
+| `v_bars_1m` | 1-min bars **plus** the microstructure history lacks |
+| `v_oi_1m` | open interest per minute per instrument |
+| `v_chain_oi` | strike-level ΔOI, PCR, call-vs-put **writing bias** |
+| `v_collection_health` | session coverage % — check before trusting a day |
+
+`v_chain_oi` is the institutional-intent signal: institutions express views by
+*writing* options, so rising CE OI is bearish and rising PE OI bullish. It
+cannot be backfilled from any API — it exists only because the collector ran.
+
+Partitioned by `dt`. **Always filter on it** — without a `dt` predicate every
+query scans every day ever collected.
+
+Security ids are reused across expiries, so `v_ticks` joins the universe file
+recorded on the *same day*. The id alone is meaningless historically.
+
 ### Phase 2 — fill the data gaps (~2 days)
 
 - [ ] Stitch expired futures contracts for multi-year OI and basis history
