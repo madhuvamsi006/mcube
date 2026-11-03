@@ -368,18 +368,28 @@ pytest
 - [x] 3 years of NIFTY data, model trained, edge measured
 - [x] 12 tests green
 
-### Phase 1 — collector (next, ~1 day) ⏳
+### Phase 1 — collector ✅ BUILT
 
 **Highest priority, because the cost of waiting is permanent.** Dhan serves historical *bars*, but order book depth and intraday strike-level OI are **live-only**. Every day without a collector is training data lost forever.
 
-- [ ] VM in `asia-south1` (Mumbai — closest to NSE/broker endpoints)
-- [ ] WebSocket: 200-level depth on NIFTY futures
-      *Constraint: 1 instrument per connection, max 5 connections*
-- [ ] WebSocket: 20-level depth for the option chain (50 instruments/connection)
-- [ ] Option chain OI snapshots every 1 min
-- [ ] Buffer → local disk → GCS parquet every 5 min (never GCS on the hot path)
-- [ ] Auto-reconnect, gap detection, state rebuild
-- [ ] TOTP token refresh at 08:45 daily
+- [x] Live feed websocket, binary packet parser (10 tests pinning the wire format)
+- [x] Quote + 5-level depth + OI, auto-chunked subscription (100/message cap)
+- [x] Dynamic option-chain universe: ATM ± N strikes, rolls past expired series
+- [x] Buffer → local parquet → optional GCS (never network on the receive path)
+- [x] Auto-reconnect with exponential backoff; token refresh on auth failure
+- [x] Gap monitor — alerts when a connected-but-silent feed stalls
+- [x] Verified live: 24 instruments subscribed, depth ladders correct
+- [ ] Deploy to a VM in `asia-south1` so it runs unattended
+- [ ] 200-level depth on the future (separate socket, 1 instrument/connection)
+
+```bash
+python scripts/run_collector.py --dry-run          # 60s connectivity check
+python scripts/run_collector.py --symbols NIFTY    # full session
+```
+
+Writes to `data/live/dt=YYYY-MM-DD/`: `ticks_*.parquet` (quote + depth + OI),
+`universe.parquet` (security_id → strike/expiry — ids are reused across
+expiries, so this must be captured at record time), `chain_*.parquet`.
 
 ### Phase 2 — fill the data gaps (~2 days)
 
