@@ -1,0 +1,122 @@
+# mcube — institutional move prediction, NSE/BSE index derivatives
+#
+# ⚠️  charges.* reflect the post-Oct-2024 STT revision. SEBI/exchanges revise these
+#     regularly. Verify against your broker's live charge sheet — a stale STT rate
+#     silently inflates every P&L number this repo produces.
+
+project:
+  name: mcube
+  timezone: Asia/Kolkata
+
+gcp:
+  project_id: ${GCP_PROJECT_ID}
+  region: asia-south1          # Mumbai — nearest to NSE/broker endpoints
+  gcs_bucket: ${GCS_BUCKET}
+  bq_dataset: mcube
+
+instruments:
+  NIFTY:
+    exchange: NSE
+    lot_size: 65               # verify — SEBI has revised index lot sizes
+    tick_size: 0.05
+    strike_step: 50
+  BANKNIFTY:
+    exchange: NSE
+    lot_size: 30
+    tick_size: 0.05
+    strike_step: 100
+  SENSEX:
+    exchange: BSE
+    lot_size: 20
+    tick_size: 0.05
+    strike_step: 100
+
+session:
+  open: "09:15"
+  close: "15:30"
+  warmup_minutes: 5            # 09:15-09:20 — feature warmup, no signals
+  cooldown_minutes: 5          # 15:25-15:30 — no new entries
+
+data:
+  bar_interval: 1min
+  depth_levels: 5              # broker WebSocket cap on NSE
+  option_chain_strikes: 11     # ATM +/- 5
+
+# ---------------------------------------------------------------------------
+# THE TRADE SPEC.  This is also the ML label — the model predicts exactly
+# what you trade.  Sweep targets in backtest/sweep.py to find what clears cost.
+# ---------------------------------------------------------------------------
+trade:
+  instrument: options          # 'futures' to validate signal | 'options' to execute
+  lots: 5
+
+  target_mode: points          # 'points' (fixed) | 'vol' (sigma-scaled, preferred)
+
+  # Fixed-point targets, per underlying. Swept by backtest/sweep.py.
+  points:
+    NIFTY:     {target: 20, stop: 13}
+    BANKNIFTY: {target: 60, stop: 40}
+    SENSEX:    {target: 70, stop: 45}
+
+  # Vol-scaled alternative: barrier = mult * EWM sigma. A fixed 20 pts is a very
+  # different trade at 10 VIX than at 20 — this adapts. Prefer once calibrated.
+  vol:
+    target_mult: 1.5
+    stop_mult: 1.0
+    vol_lookback: 60           # bars
+
+  horizon_bars: 15             # vertical barrier (1min bars)
+
+features:
+  ofi_windows: [1, 5, 15]      # minutes
+  oi_windows: [5, 15, 30]
+  include:
+    microstructure: true
+    institutional: true        # options OI flow — the core "institution" signal
+    regime: true
+    cross_index: true
+
+validation:
+  n_splits: 6
+  embargo_bars: 30             # >= horizon_bars; prevents label-window bleed
+  separate_expiry_eval: true   # expiry-day gamma is a distinct regime
+
+model:
+  lightgbm:
+    objective: binary
+    n_estimators: 400
+    learning_rate: 0.03
+    num_leaves: 31
+    min_child_samples: 200     # high — microstructure features are very noisy
+    subsample: 0.8
+    colsample_bytree: 0.6
+    reg_lambda: 5.0
+  meta_labeling:
+    enabled: true
+    min_confidence: 0.55       # primary picks direction, meta decides whether to fire
+
+charges:
+  futures:
+    brokerage_per_order: 20.0
+    brokerage_pct_cap: 0.0003
+    stt_sell_pct: 0.0002       # 0.02% of notional, sell side
+    exchange_txn_pct: 0.0000173
+    sebi_pct: 0.0000001
+    stamp_duty_buy_pct: 0.00002
+    gst_pct: 0.18
+    slippage_ticks: 1
+  options:
+    brokerage_per_order: 20.0
+    stt_sell_pct: 0.001        # 0.1% of PREMIUM, sell side
+    exchange_txn_pct: 0.0003503
+    sebi_pct: 0.0000001
+    stamp_duty_buy_pct: 0.00003
+    gst_pct: 0.18
+    slippage_pct: 0.0067       # ~Rs1 on a Rs150 ATM premium; OTM is far worse
+
+backtest:
+  initial_capital: 1000000
+  train_months: 6
+  test_months: 1
+  max_trades_per_day: 6
+  atm_delta: 0.5               # index-point -> premium-point conversion
