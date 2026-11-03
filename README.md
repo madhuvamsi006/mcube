@@ -379,8 +379,27 @@ pytest
 - [x] Auto-reconnect with exponential backoff; token refresh on auth failure
 - [x] Gap monitor — alerts when a connected-but-silent feed stalls
 - [x] Verified live: 24 instruments subscribed, depth ladders correct
-- [ ] Deploy to a VM in `asia-south1` so it runs unattended
+- [x] Cloud Run Job + Cloud Scheduler, `deploy/cloudrun.sh` (~$5-8/month)
 - [ ] 200-level depth on the future (separate socket, 1 instrument/connection)
+
+**Why a Cloud Run Job rather than a VM:** billed only for the ~6.5h it runs
+instead of 24h, nothing to patch, and Cloud Run retries a task that dies.
+Not a *Service* — a Service is request-driven and scales to zero when no
+request is in flight, whereas this process holds an outbound websocket for
+hours with no inbound traffic. Jobs allocate CPU for the whole task.
+
+The container filesystem is in-memory tmpfs that vanishes with the task, so
+`--cloud` ships each parquet to GCS a minute after writing and deletes the
+local copy. At most one minute of data is ever unreplicated.
+
+Credentials live in Secret Manager, bound to a dedicated service account with
+only `storage.objectAdmin` on the bucket and `secretAccessor` on three
+secrets — not the default compute SA.
+
+```bash
+export GCP_PROJECT_ID=your-project GCS_BUCKET=your-bucket
+./deploy/cloudrun.sh
+```
 
 ```bash
 python scripts/run_collector.py --dry-run          # 60s connectivity check

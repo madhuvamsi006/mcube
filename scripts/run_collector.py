@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import signal
 import sys
 from datetime import datetime, time as dtime
@@ -66,8 +67,6 @@ def make_token_provider():
     have TOTP configured. We warn rather than refuse, so a first run can be
     tested with whatever credentials are already to hand.
     """
-    import os
-
     if os.environ.get("DHAN_TOTP_SECRET"):
         tm = TokenManager.from_env()
 
@@ -95,15 +94,21 @@ def in_session(now: datetime | None = None) -> bool:
     return SESSION_OPEN <= now.time() <= SESSION_CLOSE
 
 
-async def flush_loop(writer: TickWriter, uploader: GCSUploader, every: float = 60.0):
-    """Flush to disk every minute; mirror to GCS every five."""
+async def flush_loop(writer: TickWriter, uploader: GCSUploader,
+                     every: float = 60.0, sync_every_cycle: bool = False):
+    """Flush to disk every minute; mirror to GCS.
+
+    On Cloud Run the filesystem is tmpfs and disappears with the task, so
+    sync_every_cycle keeps at most one minute of data unreplicated. On a VM
+    the local file survives, so a lazier 5-minute sync is fine.
+    """
     cycles = 0
     while True:
         await asyncio.sleep(every)
         writer.flush()
         cycles += 1
-        if uploader.enabled and cycles % 5 == 0:
-            await asyncio.to_thread(uploader.sync)
+        if uploader.enabled and (sync_every_cycle or cycles % 5 == 0):
+            await asyncio.to_thread(uploader.sync, str(writer.root))
 
 
 async def chain_loop(
@@ -168,8 +173,6 @@ async def main_async(args) -> None:
     cfg = yaml.safe_load(open(args.config, encoding="utf-8"))
 
     token_provider = make_token_provider()
-    import os
-
     client_id = os.environ.get("DHAN_CLIENT_ID")
     if not client_id:
         raise SystemExit("DHAN_CLIENT_ID is not set")
@@ -220,7 +223,9 @@ async def main_async(args) -> None:
     writer.write_frame(universe_frame(universe), "universe")
 
     uploader = GCSUploader(
-        bucket=args.gcs_bucket or cfg.get("gcp", {}).get("gcs_bucket") or None
+        bucket=args.gcs_bucket or os.environ.get("GCS_BUCKET")
+        or cfg.get("gcp", {}).get("gcs_bucket") or None,
+        delete_after_upload=args.cloud,
     )
     gaps = GapMonitor(stale_seconds=90)
 
@@ -235,7 +240,7 @@ async def main_async(args) -> None:
     # --- run ---------------------------------------------------------------
     tasks = [
         asyncio.create_task(feed.run()),
-        asyncio.create_task(flush_loop(writer, uploader)),
+        asyncio.create_task(flush_loop(writer, uploader, sync_every_cycle=args.cloud)),
         asyncio.create_task(heartbeat([feed], writer, gaps)),
     ]
 
@@ -271,7 +276,7 @@ async def main_async(args) -> None:
 
     writer.flush()
     if uploader.enabled:
-        await asyncio.to_thread(uploader.sync)
+        await asyncio.to_thread(uploader.sync, str(writer.root))
 
     log.info("DONE packets=%s rows_written=%s files=%s reconnects=%s",
              f"{feed.stats.packets:,}", f"{writer.total_rows:,}",
@@ -285,10 +290,13 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Dhan market data collector")
     ap.add_argument("--symbols", nargs="+", default=["NIFTY"])
     ap.add_argument("--strikes", type=int, default=10, help="ATM +/- N strikes")
-    ap.add_argument("--out", default="data/live")
+    ap.add_argument("--out", default=os.environ.get("MCUBE_OUT", "data/live"))
     ap.add_argument("--gcs-bucket", default=None)
     ap.add_argument("--config", type=Path, default=Path("config/config.yaml"))
     ap.add_argument("--dry-run", action="store_true", help="60s connectivity check")
+    ap.add_argument("--cloud", action="store_true",
+                    help="Cloud Run mode: stage to tmpfs, upload to GCS every minute, "
+                         "delete local copy after upload")
     args = ap.parse_args()
 
     try:

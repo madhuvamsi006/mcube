@@ -106,9 +106,19 @@ class GCSUploader:
     or stop collection.
     """
 
-    def __init__(self, bucket: str | None, prefix: str = "mcube/live"):
+    def __init__(
+        self,
+        bucket: str | None,
+        prefix: str = "mcube/live",
+        delete_after_upload: bool = False,
+    ):
+        # delete_after_upload is for Cloud Run, where the filesystem is an
+        # in-memory tmpfs that counts against the container memory limit and
+        # vanishes when the task ends. On a VM leave it False and keep a local
+        # copy as a second line of defence.
         self.bucket_name = bucket
         self.prefix = prefix
+        self.delete_after_upload = delete_after_upload
         self._client = None
         self._bucket = None
         self._uploaded: set[str] = set()
@@ -145,6 +155,9 @@ class GCSUploader:
                 blob.upload_from_filename(str(path))
                 self._uploaded.add(key)
                 n += 1
+                if self.delete_after_upload and not path.name.startswith("universe"):
+                    # Only unlink once the upload has returned successfully.
+                    path.unlink(missing_ok=True)
             except Exception:
                 log.exception("upload failed for %s (will retry)", key)
         if n:
