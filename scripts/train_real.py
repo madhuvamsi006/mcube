@@ -34,6 +34,12 @@ from mcube.costs.india_costs import (
 from mcube.features.bars import bar_features, session_features
 from mcube.labeling.triple_barrier import label_summary, triple_barrier_labels
 from mcube.models.train import train_primary
+from mcube.validation.robustness import robustness_report
+
+# Window pairs are deliberately varied. If the verdict depends on which
+# row you read, there is no robust edge.
+ROBUST_GRID = ((6, 2), (9, 3), (12, 3), (12, 6))
+ROBUST_SEEDS = (0, 1, 2)
 
 DATA_DIR = Path("data/raw")
 
@@ -64,6 +70,8 @@ def main() -> None:
     ap.add_argument("--config", type=Path, default=Path("config/config.yaml"))
     ap.add_argument("--save", type=Path, default=None,
                     help="persist the fitted model + feature list for live use")
+    ap.add_argument("--skip-robustness", action="store_true",
+                    help="skip the robustness grid (faster, but no verdict)")
     ap.add_argument("--shuffle-test", action="store_true",
                     help="break feature/label alignment; AUC must fall to ~0.50")
     args = ap.parse_args()
@@ -160,27 +168,55 @@ def main() -> None:
         for n, imp in result.feature_importance.head(10).items():
             print(f"    {n:<24} {imp:>8.0f}")
 
-    # --- does the measured skill clear the cost floor? ---------------------
+    # --- cost floor --------------------------------------------------------
     spot = float(df["close"].iloc[-1])
-    hit = r["precision_mean"]
-    print("\n" + "=" * 72)
-    print("  CAN THIS TRADE?")
-    print("=" * 72)
-    print(f"  measured hit rate (high-confidence signals): {hit*100:.1f}%")
-
+    print("\n" + "=" * 76)
+    print("  COST FLOOR")
+    print("=" * 76)
+    costs = {}
     for inst in ("futures", "options"):
         cost = cost_in_index_points(symbol=args.symbol, spot=spot, cfg=cfg,
                                     instrument=inst, lots=cfg["trade"]["lots"])
         be = breakeven_hit_rate(target_pts=target, stop_pts=stop, cost_pts=cost)
-        rs = expectancy_rupees(hit_rate=hit, target_pts=target, stop_pts=stop,
-                               cost_pts=cost, lot_size=cfg["instruments"][args.symbol]["lot_size"],
-                               lots=cfg["trade"]["lots"])
-        ok = "YES" if hit > be else "NO"
-        print(f"  {inst:<9} cost {cost:5.1f} pts | breakeven {be*100:5.1f}% | "
-              f"Rs/trade {rs:>9,.0f} | viable: {ok}")
-    print("=" * 72)
-    print("\n  Reminder: precision@conf is measured on purged CV folds, not a\n"
-          "  live walk-forward. Treat it as an upper bound, not a promise.\n")
+        costs[inst] = (cost, be)
+        print(f"  {inst:<9} round-trip {cost:5.1f} pts  ->  breakeven {be*100:5.1f}%")
+
+    # --- robustness --------------------------------------------------------
+    # Deliberately NOT reporting a verdict from the single CV number above.
+    # That is how "profitable" was claimed for a model whose answer flips with
+    # the split. The grid below is the number that decides.
+    if args.skip_robustness:
+        print("\n  [robustness check SKIPPED -- no tradeability verdict produced]\n")
+        return
+
+    inst = cfg["trade"]["instrument"]
+    cost_pts, be = costs[inst]
+    print(f"\n  running robustness grid on {inst} "
+          f"({len(ROBUST_GRID)} window pairs x {len(ROBUST_SEEDS)} seeds)...")
+
+    rep = robustness_report(
+        X.loc[X.index.intersection(labels[labels.label != 0].index)],
+        (labels.loc[X.index.intersection(labels[labels.label != 0].index), "label"] > 0).astype(int),
+        params=cfg["model"]["lightgbm"],
+        breakeven=be,
+        grid=ROBUST_GRID,
+        seeds=ROBUST_SEEDS,
+        embargo_bars=max(cfg["trade"]["horizon_bars"] * 2, 90),
+    )
+    print("\n" + rep.render())
+
+    s = rep.summary()
+    if rep.verdict == "ROBUST":
+        rs = expectancy_rupees(
+            hit_rate=s["pooled_hit_min"], target_pts=target, stop_pts=stop,
+            cost_pts=cost_pts, lot_size=cfg["instruments"][args.symbol]["lot_size"],
+            lots=cfg["trade"]["lots"],
+        )
+        print(f"\n  Worst-case expectancy: Rs {rs:,.0f}/trade at {cfg['trade']['lots']} lots.")
+        print("  Next gate is forward paper trading, not more backtesting.\n")
+    else:
+        print("\n  NOT TRADEABLE. Forward paper trading will not rescue a model whose")
+        print("  backtested answer depends on the split -- fix the edge first.\n")
 
 
 if __name__ == "__main__":

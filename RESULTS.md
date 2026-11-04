@@ -147,3 +147,76 @@ live P&L stops matching a backtest without anyone knowing which half broke.
 
 The feature LIST is saved with it; the paper trader reindexes to exactly that
 order, because a missing or reordered column changes predictions silently.
+
+---
+
+# v1.2 - CORRECTION. The earlier "profitable" result was wrong.
+
+Run date: 2026-11-04
+
+## What was wrong
+
+Earlier results reported "+9 to +12pp edge" and "profitable at 40-60 point
+targets". Those numbers averaged PER-FOLD hit rates. Some folds produced only a
+handful of signals and scored 100%; averaging them as equals with folds holding
+hundreds of signals inflated the result.
+
+Pooling all signals across folds -- the honest aggregate -- gives a very
+different picture:
+
+| metric                | v1.1 (mean-of-folds) | v1.2 (pooled) |
+|-----------------------|----------------------|---------------|
+| 50/33 top-5% hit rate | 47-56%               | 40.8 - 45.5%  |
+| breakeven needed      | 45.4%                | 45.4%         |
+| verdict               | "profitable"         | NO EDGE       |
+
+The gap between the two aggregations reaches 11.1pp. `robustness.py` now
+reports both side by side and flags the divergence.
+
+## Robustness grid, 50/33 at 45 min (12 cells: 4 window pairs x 3 seeds)
+
+    pooled hit across cells : 40.8% .. 45.5%   (median 41.9%)
+    breakeven               : 45.4%
+    worst-case margin       : -4.5pp
+    VERDICT: NO EDGE  (0/12 cells pass)
+
+Every configuration fails. The earlier "profit" came from one favourable split
+plus the averaging error.
+
+## Does any target work?
+
+Reduced grid, pooled hit rates, options costs, 5 lots:
+
+| target/stop | horizon | base  | breakeven | pooled min | max   | verdict  |
+|-------------|---------|-------|-----------|------------|-------|----------|
+| 30 / 20     | 30 min  | 38.0% | 49.3%     | 43.2%      | 44.0% | NO EDGE  |
+| 50 / 33     | 45 min  | 35.8% | 45.4%     | 42.0%      | 44.4% | NO EDGE  |
+| 80 / 53     | 60 min  | 33.9% | 43.3%     | 42.3%      | 42.6% | NO EDGE  |
+| 100 / 67    | 90 min  | 34.7% | 42.9%     | 42.9%      | 44.5% | FRAGILE  |
+| 150 / 100   | 120 min | 31.0% | 41.9%     | 44.2%      | 44.8% | ROBUST   |
+
+Only a 150-point target over two hours survives, and by +2.3pp. That is a
+different strategy from the one asked for -- a swing trade, roughly three
+opportunities a day, most of which would collide with the close.
+
+The real edge over base rate is about +6pp, not the +9 to +12pp reported
+earlier. It is real (the shuffle test still passes at AUC 0.499) but too small
+to pay Indian transaction costs at any short horizon.
+
+## Honest status
+
+NOT TRADEABLE. Bar-derived features alone do not produce an edge that clears
+costs at the 10-60 point horizons this project set out to trade.
+
+This does not invalidate the thesis -- it sharpens it. The model has never seen
+order-book depth or intraday strike-level OI, which are precisely the
+short-horizon signals the design calls for. The collector started recording
+them on 2026-11-04. Whether they close a 6pp gap is an open question that only
+collected data can answer.
+
+What would change the verdict:
+  1. depth + OI features, after ~2 months of collection
+  2. a robustness verdict of ROBUST at a target worth trading
+  3. forward paper trading confirming it, over 20+ trades
+
+Until all three, this is research, not a strategy.

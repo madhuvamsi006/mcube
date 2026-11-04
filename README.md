@@ -6,20 +6,29 @@ Research code. Not a trading system. Nothing here places orders.
 
 ---
 
-## TL;DR — what we found
+## TL;DR - what we found
 
 Trained on 3 years of 1-minute NIFTY data (277,087 bars, 741 sessions) from the Dhan API.
 
 | | |
 |---|---|
-| **Edge found** | +9 to +12 percentage points over base rate |
-| **AUC** | 0.5516 (real) vs 0.4989 (shuffled) — genuine, not leakage |
-| **Works at** | 40–60 point targets, 30–60 minute horizons |
-| **Does NOT work at** | 10–20 point targets, 15 minute horizons |
+| **Signal found** | +6pp over base rate - real, but small |
+| **AUC** | 0.5736 (real) vs 0.4989 (shuffled) - genuine, not leakage |
+| **Tradeable?** | **No.** Fails the robustness gate at every short-horizon target |
+| **Only survivor** | 150-point target over 2 hours, by +2.3pp - a different strategy |
 
-The original goal was *"predict direction, grab 10–20 points in 15 minutes."* The data says no — not because the model is weak, but because Indian transaction costs are ~5–7 index points per round trip, and a 20-point target needs +15pp of skill to clear them. The model delivers +9pp.
+The goal was *"predict direction, grab 10-20 points in 15 minutes."* The answer
+is no: Indian transaction costs are ~5 index points per round trip, and the
+measured edge does not clear them at any horizon under two hours.
 
-Widen the target to 40–60 points and the same model becomes profitable, because required skill falls faster than measured skill does.
+**An earlier version of this README claimed the model was profitable at 40-60
+point targets. That was wrong** - it averaged per-fold hit rates, over-weighting
+folds that produced a handful of signals. Pooled correctly, no configuration
+clears breakeven. See [RESULTS.md](RESULTS.md) v1.2.
+
+The model has never seen order-book depth or intraday option OI - the signals
+the design actually calls for. The collector began recording them on 2026-11-04.
+Whether they close the gap is the open question.
 
 Full numbers and caveats: **[RESULTS.md](RESULTS.md)**
 

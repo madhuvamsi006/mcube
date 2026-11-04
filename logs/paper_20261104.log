@@ -12,3 +12,6 @@
 11:51:25 subscribed 1 instruments in 1 chunk(s)
 11:52:00 ENTRY SHORT @ 23793.50  target 23743.50  stop 23826.50  conf 0.380
 11:53:25 bars=401 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+11:55:25 bars=403 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+11:57:25 bars=405 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+11:59:25 bars=407 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
