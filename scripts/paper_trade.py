@@ -95,6 +95,7 @@ class PaperTrader:
         self.trades: list[PaperTrade] = []
         self.signals_seen = 0
         self.last_proba: float | None = None
+        self.gap_detected = False
 
         lot = cfg["instruments"][self.symbol]["lot_size"]
         self.lots = cfg["trade"]["lots"]
@@ -110,6 +111,19 @@ class PaperTrader:
     # ----------------------------------------------------------------- bars
 
     def add_bar(self, ts: pd.Timestamp, o: float, h: float, l: float, c: float, v: float) -> None:
+        # A feed gap must not be stitched into the buffer as if the bars were
+        # consecutive: rolling windows would then span the hole and every
+        # feature would be quietly wrong. Flag it so the caller re-seeds.
+        if len(self.bars):
+            gap_min = (ts - self.bars.index[-1]).total_seconds() / 60
+            if gap_min > 5:
+                self.gap_detected = True
+                log.warning(
+                    "bar gap of %.0f min (%s -> %s). Buffer is stale; "
+                    "predictions suspended until re-seeded.",
+                    gap_min, self.bars.index[-1].strftime("%H:%M"), ts.strftime("%H:%M"),
+                )
+
         self.bars.loc[ts] = {"open": o, "high": h, "low": l, "close": c, "volume": v}
         self.bars = self.bars.tail(SEED_BARS + 400)
 
@@ -117,7 +131,7 @@ class PaperTrader:
 
     def predict(self) -> float | None:
         """P(target before stop) for the latest bar, or None if not ready."""
-        if len(self.bars) < 250:
+        if len(self.bars) < 250 or self.gap_detected:
             return None
 
         X = pd.concat(
@@ -181,6 +195,26 @@ class PaperTrader:
             "LONG" if side > 0 else "SHORT", price, t.target_px, t.stop_px, proba,
         )
 
+    def expire_stale(self, now: pd.Timestamp) -> None:
+        """Close trades whose deadline has passed, on WALL CLOCK.
+
+        Exit checks are otherwise driven by bar arrival, so a feed outage would
+        leave a trade open indefinitely -- past its stop and past its deadline.
+        That happened on the first live run: a short blew through its stop
+        during a 2h16m network drop and was still logged as open.
+
+        A trade expired during an outage has an unknown true outcome, so it is
+        marked `outage` rather than scored. Counting it as a win or a loss
+        would be inventing data.
+        """
+        for t in self.trades:
+            if t.is_open and now >= pd.Timestamp(t.deadline):
+                self._close(t, now, t.entry_px, "outage")
+                log.warning(
+                    "trade from %s expired with no price updates -- feed gap. "
+                    "Outcome unknown, excluded from hit rate.", t.entry_time,
+                )
+
     def _update_open(self, ts: pd.Timestamp, price: float) -> None:
         for t in self.trades:
             if not t.is_open:
@@ -222,14 +256,20 @@ class PaperTrader:
 
     def summary(self) -> dict:
         closed = [t for t in self.trades if not t.is_open]
+        # Trades that expired during a feed outage have an UNKNOWN outcome.
+        # Scoring them either way would be inventing data.
+        outages = [t for t in closed if t.exit_reason == "outage"]
+        closed = [t for t in closed if t.exit_reason != "outage"]
         if not closed:
-            return {"trades": 0, "open": sum(t.is_open for t in self.trades)}
+            return {"trades": 0, "open": sum(t.is_open for t in self.trades),
+                    "excluded_outage": len(outages)}
 
         net = np.array([t.net_rs for t in closed])
         wins = net > 0
         return {
             "trades": len(closed),
             "open": sum(t.is_open for t in self.trades),
+            "excluded_outage": len(outages),
             "hit_rate_pct": round(100 * wins.mean(), 1),
             "net_rs": round(float(net.sum())),
             "avg_rs": round(float(net.mean())),
@@ -337,13 +377,40 @@ async def main_async(args) -> None:
     feed = LiveFeed(instruments=universe, token_provider=provider,
                     client_id=os.environ["DHAN_CLIENT_ID"], on_ticks=on_ticks)
 
+    async def reseed() -> None:
+        """Refetch history to repair the buffer after a feed gap."""
+        try:
+            now = datetime.now(IST)
+            fresh = await asyncio.to_thread(
+                client.intraday,
+                security_id=SPOT_IDS[symbol], exchange_segment="IDX_I",
+                instrument="INDEX", interval=1,
+                from_date=(now - pd.Timedelta(days=10)).strftime("%Y-%m-%d 09:15:00"),
+                to_date=now.strftime("%Y-%m-%d 15:30:00"), oi=False,
+            )
+            if not fresh.empty:
+                trader.bars = fresh[["open", "high", "low", "close", "volume"]].tail(SEED_BARS)
+                trader.gap_detected = False
+                log.info("buffer re-seeded with %d bars; predictions resumed", len(trader.bars))
+        except Exception as e:
+            log.warning("re-seed failed (%s); will retry", str(e)[:100])
+
     async def report():
         while True:
             await asyncio.sleep(args.report_every)
+
+            # Wall-clock expiry, independent of bar arrival. Without this a
+            # feed outage leaves trades open past their deadline forever.
+            trader.expire_stale(pd.Timestamp.now(tz=IST))
+
+            if trader.gap_detected:
+                await reseed()
+
             s = trader.summary()
             conf = f"{trader.last_proba:.3f}" if trader.last_proba is not None else "--"
-            log.info("bars=%d signals=%d last_p=%s | %s",
-                     len(trader.bars), trader.signals_seen, conf, s)
+            stale = " [BUFFER STALE]" if trader.gap_detected else ""
+            log.info("bars=%d signals=%d last_p=%s%s | %s",
+                     len(trader.bars), trader.signals_seen, conf, stale, s)
             trader.save()
 
     try:

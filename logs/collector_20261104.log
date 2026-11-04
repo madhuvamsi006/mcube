@@ -46,3 +46,60 @@
 11:59:21 INFO    collector                    packets=29,662 buffered=0 written=29,662 files=8 reconnects=0 tracked=44 stale=0.0% silent_for=0s
 12:00:21 INFO    mcube.collector.writer       flushed 3702 rows -> ticks_120021.parquet
 12:00:21 INFO    collector                    packets=33,364 buffered=0 written=33,364 files=9 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:01:21 INFO    mcube.collector.writer       flushed 3695 rows -> ticks_120121.parquet
+12:01:21 INFO    collector                    packets=37,059 buffered=0 written=37,059 files=10 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:02:21 INFO    mcube.collector.writer       flushed 3729 rows -> ticks_120221.parquet
+12:02:21 INFO    collector                    packets=40,788 buffered=0 written=40,788 files=11 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:03:21 INFO    mcube.collector.writer       flushed 3711 rows -> ticks_120321.parquet
+12:03:21 INFO    collector                    packets=44,499 buffered=0 written=44,499 files=12 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:04:21 INFO    mcube.collector.writer       flushed 3706 rows -> ticks_120421.parquet
+12:04:21 INFO    collector                    packets=48,205 buffered=0 written=48,205 files=13 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:05:21 INFO    mcube.collector.writer       flushed 3705 rows -> ticks_120521.parquet
+12:05:21 INFO    collector                    packets=51,910 buffered=0 written=51,910 files=14 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:06:21 INFO    mcube.collector.writer       flushed 3702 rows -> ticks_120621.parquet
+12:06:21 INFO    collector                    packets=55,612 buffered=0 written=55,612 files=15 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:07:22 INFO    mcube.collector.writer       flushed 3713 rows -> ticks_120721.parquet
+12:07:22 INFO    collector                    packets=59,325 buffered=0 written=59,325 files=16 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:08:22 INFO    mcube.collector.writer       flushed 3711 rows -> ticks_120822.parquet
+12:08:22 INFO    collector                    packets=63,036 buffered=0 written=63,036 files=17 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:09:22 INFO    mcube.collector.writer       flushed 3706 rows -> ticks_120922.parquet
+12:09:22 INFO    collector                    packets=66,742 buffered=0 written=66,742 files=18 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:10:22 INFO    mcube.collector.writer       flushed 3705 rows -> ticks_121022.parquet
+12:10:22 INFO    collector                    packets=70,447 buffered=0 written=70,447 files=19 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:11:22 INFO    mcube.collector.writer       flushed 3715 rows -> ticks_121122.parquet
+12:11:22 INFO    collector                    packets=74,162 buffered=0 written=74,162 files=20 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:12:22 INFO    mcube.collector.writer       flushed 3699 rows -> ticks_121222.parquet
+12:12:22 INFO    collector                    packets=77,861 buffered=0 written=77,861 files=21 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:13:22 INFO    mcube.collector.writer       flushed 3702 rows -> ticks_121322.parquet
+12:13:22 INFO    collector                    packets=81,563 buffered=0 written=81,563 files=22 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:14:22 INFO    mcube.collector.writer       flushed 3698 rows -> ticks_121422.parquet
+12:14:22 INFO    collector                    packets=85,261 buffered=0 written=85,261 files=23 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:15:54 INFO    mcube.collector.writer       flushed 738 rows -> ticks_121554.parquet
+12:15:54 INFO    collector                    packets=85,999 buffered=0 written=85,999 files=24 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+12:15:54 WARNING mcube.collector.feed         feed dropped (no close frame received or sent). reconnect in 1s
+12:15:55 WARNING mcube.collector.feed         feed dropped ([Errno 11001] getaddrinfo failed). reconnect in 2s
+12:15:57 WARNING mcube.collector.feed         feed dropped ([Errno 11001] getaddrinfo failed). reconnect in 4s
+14:29:22 INFO    collector                    packets=85,999 buffered=0 written=85,999 files=24 reconnects=3 tracked=44 stale=100.0% silent_for=8009s
+14:29:22 ERROR   collector                    NO PACKETS FOR 8009s DURING SESSION -- feed may be dead
+14:29:22 WARNING mcube.collector.feed         feed dropped ([Errno 11001] getaddrinfo failed). reconnect in 8s
+14:29:30 WARNING mcube.collector.feed         feed dropped ([Errno 11001] getaddrinfo failed). reconnect in 16s
+14:29:46 WARNING mcube.collector.feed         feed dropped ([Errno 11001] getaddrinfo failed). reconnect in 32s
+14:30:22 INFO    collector                    packets=85,999 buffered=0 written=85,999 files=24 reconnects=6 tracked=44 stale=100.0% silent_for=8069s
+14:30:22 ERROR   collector                    NO PACKETS FOR 8069s DURING SESSION -- feed may be dead
+14:30:23 WARNING mcube.collector.feed         feed dropped ([WinError 10054] An existing connection was forcibly closed by the remote host). reconnect in 60s
+14:31:22 INFO    collector                    packets=85,999 buffered=0 written=85,999 files=24 reconnects=7 tracked=44 stale=100.0% silent_for=8129s
+14:31:22 ERROR   collector                    NO PACKETS FOR 8129s DURING SESSION -- feed may be dead
+14:31:24 INFO    mcube.collector.feed         feed connected
+14:31:25 INFO    mcube.collector.feed         subscribed 1 index instrument(s) with code 15
+14:31:25 INFO    mcube.collector.feed         subscribed 43 derivative instrument(s) with code 21
+14:31:25 INFO    mcube.collector.feed         subscribed 44 instruments in 2 chunk(s)
+14:32:23 INFO    mcube.collector.writer       flushed 3650 rows -> ticks_143222.parquet
+14:32:23 INFO    collector                    packets=89,649 buffered=0 written=89,649 files=25 reconnects=7 tracked=44 stale=0.0% silent_for=0s
+14:33:23 INFO    mcube.collector.writer       flushed 3721 rows -> ticks_143323.parquet
+14:33:23 INFO    collector                    packets=93,370 buffered=0 written=93,370 files=26 reconnects=7 tracked=44 stale=0.0% silent_for=0s
+14:34:23 INFO    mcube.collector.writer       flushed 3712 rows -> ticks_143423.parquet
+14:34:23 INFO    collector                    packets=97,082 buffered=0 written=97,082 files=27 reconnects=7 tracked=44 stale=0.0% silent_for=0s
+14:35:23 INFO    mcube.collector.writer       flushed 3704 rows -> ticks_143523.parquet
+14:35:23 INFO    collector                    packets=100,786 buffered=0 written=100,786 files=28 reconnects=7 tracked=44 stale=0.0% silent_for=0s
+14:36:23 INFO    mcube.collector.writer       flushed 3605 rows -> ticks_143623.parquet
+14:36:23 INFO    collector                    packets=104,391 buffered=0 written=104,391 files=29 reconnects=7 tracked=44 stale=0.0% silent_for=1s

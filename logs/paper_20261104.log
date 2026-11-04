@@ -15,3 +15,77 @@
 11:55:25 bars=403 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
 11:57:25 bars=405 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
 11:59:25 bars=407 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+12:01:25 bars=409 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+12:03:25 bars=411 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+12:05:25 bars=413 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+12:07:25 bars=415 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+12:09:25 bars=417 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+12:11:25 bars=419 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+12:13:25 bars=421 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+12:15:54 bars=423 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+12:15:54 feed dropped (no close frame received or sent). reconnect in 1s
+12:15:55 feed dropped ([Errno 11001] getaddrinfo failed). reconnect in 2s
+12:15:57 feed dropped ([Errno 11001] getaddrinfo failed). reconnect in 4s
+14:29:22 bars=423 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+14:29:22 feed dropped ([Errno 11001] getaddrinfo failed). reconnect in 8s
+14:29:30 feed dropped ([Errno 11001] getaddrinfo failed). reconnect in 16s
+14:29:46 feed dropped ([Errno 11001] getaddrinfo failed). reconnect in 32s
+14:30:23 feed dropped ([WinError 10054] An existing connection was forcibly closed by the remote host). reconnect in 60s
+14:31:22 bars=423 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}
+14:31:24 feed connected
+14:31:25 subscribed 1 index instrument(s) with code 15
+14:31:25 subscribed 1 instruments in 1 chunk(s)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Program Files\Python314\Lib\logging\__init__.py", line 1151, in emit
+    msg = self.format(record)
+  File "C:\Program Files\Python314\Lib\logging\__init__.py", line 999, in format
+    return fmt.format(record)
+           ~~~~~~~~~~^^^^^^^^
+  File "C:\Program Files\Python314\Lib\logging\__init__.py", line 712, in format
+    record.message = record.getMessage()
+                     ~~~~~~~~~~~~~~~~~^^
+  File "C:\Program Files\Python314\Lib\logging\__init__.py", line 400, in getMessage
+    msg = msg % self.args
+          ~~~~^~~~~~~~~~~
+ValueError: unsupported format character ',' (0x2c) at index 63
+Call stack:
+  File "C:\Users\MadhuVamsiTuraka\Desktop\innovation\mcube\scripts\paper_trade.py", line 385, in <module>
+    main()
+  File "C:\Users\MadhuVamsiTuraka\Desktop\innovation\mcube\scripts\paper_trade.py", line 379, in main
+    asyncio.run(main_async(args))
+  File "C:\Program Files\Python314\Lib\asyncio\runners.py", line 205, in run
+    return runner.run(main)
+  File "C:\Program Files\Python314\Lib\asyncio\runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+  File "C:\Program Files\Python314\Lib\asyncio\base_events.py", line 706, in run_until_complete
+    self.run_forever()
+  File "C:\Program Files\Python314\Lib\asyncio\base_events.py", line 677, in run_forever
+    self._run_once()
+  File "C:\Program Files\Python314\Lib\asyncio\base_events.py", line 2056, in _run_once
+    handle._run()
+  File "C:\Program Files\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Users\MadhuVamsiTuraka\Desktop\innovation\mcube\src\mcube\collector\feed.py", line 143, in run
+    self._handle(message)
+  File "C:\Users\MadhuVamsiTuraka\Desktop\innovation\mcube\src\mcube\collector\feed.py", line 178, in _handle
+    self.on_ticks(rows)
+  File "C:\Users\MadhuVamsiTuraka\Desktop\innovation\mcube\scripts\paper_trade.py", line 333, in on_ticks
+    trader.step(ts, c)
+  File "C:\Users\MadhuVamsiTuraka\Desktop\innovation\mcube\scripts\paper_trade.py", line 143, in step
+    self._update_open(ts, price)
+  File "C:\Users\MadhuVamsiTuraka\Desktop\innovation\mcube\scripts\paper_trade.py", line 196, in _update_open
+    self._close(t, ts, t.stop_px, "stop")
+  File "C:\Users\MadhuVamsiTuraka\Desktop\innovation\mcube\scripts\paper_trade.py", line 216, in _close
+    log.info(
+Message: 'EXIT  %-7s @ %.2f  gross %+.1f  cost %.1f  net %+.1f pts (Rs %+,.0f)'
+Arguments: ('stop', 23826.5, -33.0, 4.646654703229538, -37.64665470322954, -6117.5813892748)
+14:32:00 ENTRY SHORT @ 23894.50  target 23844.50  stop 23927.50  conf 0.354
+14:33:22 bars=426 signals=2 last_p=0.354 | {'trades': 1, 'open': 1, 'hit_rate_pct': np.float64(0.0), 'net_rs': -6118, 'avg_rs': -6118, 'total_cost_rs': 1510, 'exits': {'stop': 1}}
+14:33:52 model: NIFTY 50/33 pts, 45-bar horizon | CV AUC 0.5736 | 37 features
+14:33:52 seeded with 400 historical bars
+14:33:53 feed connected
+14:33:53 subscribed 1 index instrument(s) with code 15
+14:33:53 subscribed 1 instruments in 1 chunk(s)
+14:34:00 ENTRY SHORT @ 23897.50  target 23847.50  stop 23930.50  conf 0.247
+14:35:52 bars=401 signals=1 last_p=0.247 | {'trades': 0, 'open': 1, 'excluded_outage': 0}
