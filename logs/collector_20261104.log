@@ -1,0 +1,36 @@
+11:44:51 WARNING collector                    token: STATIC -- expires in ~24h. Set DHAN_TOTP_SECRET for unattended running.
+11:44:51 INFO    mcube.collector.instruments  scrip master from cache data\cache\scrip_master.csv
+11:44:52 INFO    collector                    NIFTY last close 23793.50
+11:44:52 INFO    mcube.collector.instruments  NIFTY: 42 option legs, expiry 2026-11-09, ATM 23800
+11:44:52 INFO    collector                    universe: 44 instruments {'spot': 1, 'future': 1, 'option': 42}
+11:44:52 WARNING mcube.collector.writer       GCS disabled (No module named 'google'). Recording continues locally.
+11:44:52 INFO    mcube.collector.feed         feed connected
+11:44:52 INFO    mcube.collector.feed         subscribed 44 instruments in 1 chunk(s)
+11:45:52 INFO    mcube.collector.writer       flushed 3158 rows -> ticks_114552.parquet
+11:45:52 INFO    collector                    packets=3,158 buffered=0 written=3,158 files=1 reconnects=0 tracked=43 stale=0.0% silent_for=0s
+11:46:52 INFO    mcube.collector.writer       flushed 3105 rows -> ticks_114652.parquet
+11:46:52 INFO    collector                    packets=6,263 buffered=0 written=6,263 files=2 reconnects=0 tracked=43 stale=0.0% silent_for=0s
+11:47:52 INFO    mcube.collector.writer       flushed 3095 rows -> ticks_114752.parquet
+11:47:52 INFO    collector                    packets=9,358 buffered=0 written=9,358 files=3 reconnects=0 tracked=43 stale=0.0% silent_for=0s
+11:48:52 INFO    mcube.collector.writer       flushed 3101 rows -> ticks_114852.parquet
+11:48:52 INFO    collector                    packets=12,459 buffered=0 written=12,459 files=4 reconnects=0 tracked=43 stale=0.0% silent_for=0s
+11:49:52 INFO    mcube.collector.writer       flushed 3102 rows -> ticks_114952.parquet
+11:49:52 INFO    collector                    packets=15,561 buffered=0 written=15,561 files=5 reconnects=0 tracked=43 stale=0.0% silent_for=0s
+11:50:52 INFO    mcube.collector.writer       flushed 3106 rows -> ticks_115052.parquet
+11:50:52 INFO    collector                    packets=18,667 buffered=0 written=18,667 files=6 reconnects=0 tracked=43 stale=0.0% silent_for=0s
+11:51:20 WARNING collector                    token: STATIC -- expires in ~24h. Set DHAN_TOTP_SECRET for unattended running.
+11:51:20 INFO    mcube.collector.instruments  scrip master from cache data\cache\scrip_master.csv
+11:51:20 INFO    collector                    NIFTY last close 23789.20
+11:51:20 INFO    mcube.collector.instruments  NIFTY: 42 option legs, expiry 2026-11-09, ATM 23800
+11:51:20 INFO    collector                    universe: 44 instruments {'spot': 1, 'future': 1, 'option': 42}
+11:51:20 WARNING mcube.collector.writer       GCS disabled (No module named 'google'). Recording continues locally.
+11:51:21 INFO    mcube.collector.feed         feed connected
+11:51:21 INFO    mcube.collector.feed         subscribed 1 index instrument(s) with code 15
+11:51:21 INFO    mcube.collector.feed         subscribed 43 derivative instrument(s) with code 21
+11:51:21 INFO    mcube.collector.feed         subscribed 44 instruments in 2 chunk(s)
+11:52:20 INFO    mcube.collector.writer       flushed 3738 rows -> ticks_115220.parquet
+11:52:20 INFO    collector                    packets=3,738 buffered=0 written=3,738 files=1 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+11:53:20 INFO    mcube.collector.writer       flushed 3708 rows -> ticks_115320.parquet
+11:53:20 INFO    collector                    packets=7,446 buffered=0 written=7,446 files=2 reconnects=0 tracked=44 stale=0.0% silent_for=0s
+11:54:20 INFO    mcube.collector.writer       flushed 3699 rows -> ticks_115420.parquet
+11:54:20 INFO    collector                    packets=11,145 buffered=0 written=11,145 files=3 reconnects=0 tracked=44 stale=0.0% silent_for=0s

@@ -1,0 +1,14 @@
+11:44:56 model: NIFTY 50/33 pts, 45-bar horizon | CV AUC 0.5736 | 37 features
+11:44:56 seeded with 400 historical bars
+11:44:56 feed connected
+11:44:56 subscribed 1 instruments in 1 chunk(s)
+11:46:56 bars=400 signals=0 last_p=-- | {'trades': 0, 'open': 0}
+11:48:56 bars=400 signals=0 last_p=-- | {'trades': 0, 'open': 0}
+11:50:56 bars=400 signals=0 last_p=-- | {'trades': 0, 'open': 0}
+11:51:25 model: NIFTY 50/33 pts, 45-bar horizon | CV AUC 0.5736 | 37 features
+11:51:25 seeded with 400 historical bars
+11:51:25 feed connected
+11:51:25 subscribed 1 index instrument(s) with code 15
+11:51:25 subscribed 1 instruments in 1 chunk(s)
+11:52:00 ENTRY SHORT @ 23793.50  target 23743.50  stop 23826.50  conf 0.380
+11:53:25 bars=401 signals=1 last_p=0.380 | {'trades': 0, 'open': 1}

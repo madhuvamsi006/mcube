@@ -32,7 +32,9 @@ FEED_URL = "wss://api-feed.dhan.co"
 MAX_PER_SUBSCRIBE = 100
 MAX_PER_CONNECTION = 5000
 
-REQUEST_FULL = 21        # quote + 5-level depth
+REQUEST_TICKER = 15      # LTP only -- the ONLY code that works for IDX_I indices
+REQUEST_QUOTE = 17
+REQUEST_FULL = 21        # quote + 5-level depth (derivatives only)
 REQUEST_DISCONNECT = 12
 
 
@@ -85,15 +87,34 @@ class LiveFeed:
         )
 
     async def _subscribe(self, ws) -> None:
-        pairs = [(i.segment, i.security_id) for i in self.instruments]
-        for start in range(0, len(pairs), MAX_PER_SUBSCRIBE):
-            chunk = pairs[start : start + MAX_PER_SUBSCRIBE]
-            await ws.send(json.dumps(subscribe_message(chunk, self.request_code)))
-            # Brief pause between chunks; bursting all at once can get the
-            # connection dropped.
-            await asyncio.sleep(0.15)
+        """Subscribe, splitting by segment because indices need a different code.
+
+        An INDEX has no order book, so request code 21 (Full = quote + 5-level
+        depth) yields NOTHING for IDX_I instruments -- the socket stays open and
+        silent. Indices must be subscribed as Ticker (15) instead.
+
+        Found the hard way: the first live run recorded 44 instruments and the
+        spot index was simply absent from the data.
+        """
+        idx = [(i.segment, i.security_id) for i in self.instruments if i.segment == "IDX_I"]
+        other = [(i.segment, i.security_id) for i in self.instruments if i.segment != "IDX_I"]
+
+        total_chunks = 0
+        for pairs, code, label in ((idx, REQUEST_TICKER, "index"),
+                                   (other, self.request_code, "derivative")):
+            if not pairs:
+                continue
+            for start in range(0, len(pairs), MAX_PER_SUBSCRIBE):
+                chunk = pairs[start : start + MAX_PER_SUBSCRIBE]
+                await ws.send(json.dumps(subscribe_message(chunk, code)))
+                total_chunks += 1
+                # Brief pause between chunks; bursting all at once can get the
+                # connection dropped.
+                await asyncio.sleep(0.15)
+            log.info("subscribed %d %s instrument(s) with code %d", len(pairs), label, code)
+
         log.info("subscribed %d instruments in %d chunk(s)",
-                 len(pairs), (len(pairs) + MAX_PER_SUBSCRIBE - 1) // MAX_PER_SUBSCRIBE)
+                 len(idx) + len(other), total_chunks)
 
     async def run(self) -> None:
         """Connect, subscribe, read until stopped. Reconnects on failure."""
