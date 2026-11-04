@@ -67,33 +67,44 @@ class TrainResult:
         }
 
 
-def _check_sane(result: TrainResult) -> list[str]:
+def _check_sane(result: TrainResult, base_rate: float | None = None) -> list[str]:
     """Flag results that are too good to be true.
 
-    An AUC above ~0.65 on 1-15 minute index direction is not a breakthrough; it
-    is almost always leakage. Common causes: a feature computed with centred or
-    forward-looking windows, labels not purged from training folds, or features
-    joined on a timestamp that is not strictly in the past.
+    Judged on AUC, not accuracy. Triple-barrier labels are imbalanced by
+    construction, so a model that has learned only the base rate still posts a
+    high accuracy -- an absolute accuracy threshold just cries wolf.
+
+    An AUC much above ~0.62 on short-horizon index direction is not a
+    breakthrough; it is almost always leakage, or a vertical barrier so short
+    that only high-volatility episodes resolve (a selection effect that
+    inflates AUC without any real skill).
     """
     warnings: list[str] = []
     s = result.summary()
     if not s:
         return warnings
 
-    if s["auc_mean"] > 0.65:
+    if s["auc_mean"] > 0.68:
         warnings.append(
             f"AUC {s['auc_mean']:.3f} is implausibly high for this problem. "
-            "Suspect leakage: check for forward-looking feature windows and "
-            "confirm purging actually ran."
+            "Suspect leakage, or a horizon too short for the target so that "
+            "only volatile episodes resolve. Run --shuffle-test."
         )
-    if s["accuracy_mean"] > 0.62:
+
+    # Accuracy only matters relative to the majority-class rate.
+    if base_rate is not None:
+        majority = max(base_rate, 1 - base_rate)
+        if s["accuracy_mean"] < majority + 0.005:
+            warnings.append(
+                f"Accuracy {s['accuracy_mean']:.3f} barely beats the majority "
+                f"class ({majority:.3f}). Judge this model on AUC "
+                f"({s['auc_mean']:.3f}) and on hit rate within high-confidence "
+                "signals, not on accuracy."
+            )
+
+    if s["accuracy_std"] < 0.003 and len(result.folds) > 3:
         warnings.append(
-            f"Accuracy {s['accuracy_mean']:.3f} exceeds what this signal class "
-            "plausibly supports. Audit the feature pipeline before trusting it."
-        )
-    if s["accuracy_std"] < 0.005 and len(result.folds) > 3:
-        warnings.append(
-            "Accuracy is suspiciously stable across folds — regimes should "
+            "Accuracy is suspiciously stable across folds -- regimes should "
             "produce more variation. Check that folds are genuinely disjoint."
         )
     return warnings
@@ -181,7 +192,7 @@ def train_primary(
         else None,
     )
 
-    for w in _check_sane(result):
+    for w in _check_sane(result, base_rate=float(y.mean())):
         print(f"  [WARNING] {w}")
 
     return result

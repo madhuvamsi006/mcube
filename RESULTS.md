@@ -77,3 +77,73 @@ This result therefore JUSTIFIES the collector rather than replacing it.
 2. Stitch expired futures contracts for multi-year OI and basis history.
 3. Full backtest at 50/33 over 45 min with trade caps and realistic fills.
 4. Paper trade before any capital.
+
+---
+
+# v1.1 - target/horizon matching, and the volume-feature finding
+
+Run date: 2026-11-04
+
+## Horizon must scale with the target
+
+Training 50/33 on the config default 15-bar horizon produced AUC 0.6249 -- which
+looked like an improvement and was not. 78.6% of labels timed out, because a
+50-point move rarely completes in 15 minutes. The ~21% that DID resolve were a
+high-volatility selection, and the model was partly learning "is this a volatile
+period" rather than direction.
+
+Widening the horizon to 45 bars:
+
+    horizon 15   timeout 78.6%   AUC 0.6249   <- inflated by selection
+    horizon 45   timeout 46.2%   AUC 0.5736   <- honest
+
+`train_real.py` now warns when timeouts exceed 50%.
+
+## Purged K-fold vs walk-forward
+
+    purged K-fold (12/3)   AUC 0.5736
+    walk-forward  (6/2)    AUC 0.5296
+
+Walk-forward is the number to trust. K-fold is for hyperparameter choice only.
+
+## Volume features do not help
+
+Dhan reports NIFTY SPOT volume only from 2025-12-03; before that it is zero.
+So 7 features (vol_z_*, vol_ratio, flow_imb_*, vwap_dev_bps) covered just 30.7%
+of the 3-year history and were silently dropped by the coverage filter.
+
+Tested whether they are worth trading history for, 50/33 at 45 min:
+
+| variant                          | feats | rows    | AUC    | top5% hit |
+|----------------------------------|-------|---------|--------|-----------|
+| 3yr, volume cols auto-dropped    |  37   | 149,154 | 0.5296 |   44.5%   |
+| since Dec-2025, WITH volume      |  44   |  49,409 | 0.5301 |   33.9%   |
+| since Dec-2025, WITHOUT volume   |  34   |  49,409 | 0.5385 |   36.7%   |
+
+Volume features add nothing (0.5301 with vs 0.5385 without on the same window),
+and three times the history matters far more than seven extra columns. Keep the
+3-year model.
+
+Worth noting the flow proxy (`signed_vol`, `flow_imb`) was the closest thing in
+bar data to real order flow, and it did not help. That is mild evidence that bar
+level flow proxies are too coarse -- and a further argument for the collector's
+true depth data rather than against the thesis.
+
+## Live/research parity verified
+
+The paper trader runs the SAME feature code over a rolling buffer. Checked by
+feeding identical bars through both paths:
+
+    research path : 0.67167261
+    live path     : 0.67167261   MATCH
+
+This is the check that catches online/offline feature skew -- the usual reason
+live P&L stops matching a backtest without anyone knowing which half broke.
+
+## Model saved
+
+    models/nifty_50_33.joblib   50/33 pts, 45-bar horizon, 37 features
+                                CV AUC 0.5736, walk-forward AUC 0.5296
+
+The feature LIST is saved with it; the paper trader reindexes to exactly that
+order, because a missing or reordered column changes predictions silently.

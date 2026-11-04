@@ -56,7 +56,14 @@ def main() -> None:
     ap.add_argument("--symbol", default="NIFTY")
     ap.add_argument("--target", type=float, default=None)
     ap.add_argument("--stop", type=float, default=None)
+    # A wide target on a short horizon mostly times out, and the subset that
+    # does resolve is a high-volatility selection that inflates AUC. Scale the
+    # horizon with the target.
+    ap.add_argument("--horizon", type=int, default=None,
+                    help="vertical barrier in bars; must scale with the target")
     ap.add_argument("--config", type=Path, default=Path("config/config.yaml"))
+    ap.add_argument("--save", type=Path, default=None,
+                    help="persist the fitted model + feature list for live use")
     ap.add_argument("--shuffle-test", action="store_true",
                     help="break feature/label alignment; AUC must fall to ~0.50")
     args = ap.parse_args()
@@ -64,6 +71,9 @@ def main() -> None:
     cfg = yaml.safe_load(open(args.config, encoding="utf-8"))
     if args.target:
         cfg["trade"]["points"][args.symbol] = {"target": args.target, "stop": args.stop or args.target / 1.5}
+    if args.horizon:
+        cfg["trade"]["horizon_bars"] = args.horizon
+        cfg["validation"]["embargo_bars"] = max(args.horizon * 2, 30)
 
     pts = cfg["trade"]["points"][args.symbol]
     target, stop = float(pts["target"]), float(pts["stop"])
@@ -92,6 +102,10 @@ def main() -> None:
     print(f"      {s['n']:,} labels | target {s['target_hits']:,} | stop {s['stop_hits']:,} "
           f"| timeout {s['vertical_pct']}%")
     print(f"      actual base rate {s['target_rate']}%  (random walk predicts {base*100:.1f}%)")
+    if s['vertical_pct'] > 50:
+        print(f"      [WARNING] {s['vertical_pct']}% of labels timed out. The horizon is too")
+        print(f"                short for a {target:g}-point target. The resolved subset is a")
+        print(f"                high-volatility selection, which INFLATES AUC. Widen --horizon.")
 
     if args.shuffle_test:
         # Permute ONLY the label values. Index and t1 must stay intact: they
@@ -115,6 +129,31 @@ def main() -> None:
         verdict = "PASS - no leakage" if r["auc_mean"] < 0.52 else "FAIL - LEAKING"
         print(f"\n  SHUFFLE TEST: {verdict} (AUC {r['auc_mean']:.4f})\n")
         return
+
+    # Persist for the paper trader. The FEATURE LIST is saved alongside the
+    # model: live must build exactly these columns in exactly this order, or
+    # predictions drift from what was validated without any error being raised.
+    if args.save:
+        import joblib
+
+        args.save.parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(
+            {
+                "model": result.primary,
+                "features": list(X.columns),
+                "symbol": args.symbol,
+                "target": target,
+                "stop": stop,
+                "horizon_bars": cfg["trade"]["horizon_bars"],
+                "trained_at": pd.Timestamp.now(tz="Asia/Kolkata").isoformat(),
+                "train_rows": int(len(X)),
+                "cv_auc": r["auc_mean"],
+                "cv_precision": r["precision_mean"],
+                "base_rate": s["target_rate"],
+            },
+            args.save,
+        )
+        print(f"\n  saved model -> {args.save}  ({X.shape[1]} features)")
 
     if result.feature_importance is not None:
         print("\n  top features:")
